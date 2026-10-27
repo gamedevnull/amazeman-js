@@ -10,7 +10,7 @@ export enum SoundId {
 }
 
 export class SoundEffect {
-    play(): Promise<void> { return Promise.resolve(); }
+    play(): void {}
     stop(): void {}
     isPlaying(): boolean { return false; }
     setVolume(_volume: number): this { return this; }
@@ -20,6 +20,7 @@ export class SoundEffect {
 export class SoundManager {
     async loadSounds(): Promise<void> {}
     get(_id: SoundId): SoundEffect | undefined { return new SoundEffect(); }
+    fixContext(): void {}
     setVolume(_id: SoundId, _volume: number): void {}
     setAllEnabled(_enabled: boolean): void {}
 }

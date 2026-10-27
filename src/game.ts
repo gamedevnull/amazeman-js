@@ -62,6 +62,8 @@ export class Game {
         this.raycaster = new Raycaster();
 
         this.player.setSoundManager(this.soundManager);
+
+        window.addEventListener('keydown', () => this.soundManager.fixContext()); // Safari audio fix
     }
 
     async loadAssets() {

@@ -7,12 +7,28 @@ export class SoundEffect {
     private gainNode: GainNode;
     private currentSource: AudioBufferSourceNode | null = null;
     private previousVolume: number = 1;
+    private readyPromise: Promise<void>;
 
     constructor(src: string) {
         this.src = src;
         this.gainNode = SoundEffect.audioContext.createGain();
         this.gainNode.connect(SoundEffect.audioContext.destination);
-        this.initBuffer();
+        this.readyPromise = this.initBuffer();
+    }
+
+    whenReady(): Promise<void> {
+        return this.readyPromise;
+    }
+
+    static fixContext(): void {
+        // state !== 'running' is here because Safari can also use 'interrupted'
+        if (SoundEffect.audioContext.state !== 'running') {
+            void SoundEffect.audioContext.resume();
+        }
+    }
+
+    private static isContextRunning(): boolean {
+        return SoundEffect.audioContext.state === 'running';
     }
 
     public setVolume(volume: number): this {
@@ -38,14 +54,11 @@ export class SoundEffect {
         }
     }
 
-    public async play(): Promise<void> {
-        if (this.mute || !this.buffer) {
+    public play(): void {
+        if (this.mute || !this.buffer || !SoundEffect.isContextRunning()) {
             return;
         }
         try {
-            if (SoundEffect.audioContext.state === 'suspended') {
-                await SoundEffect.audioContext.resume();
-            }
             const source = SoundEffect.audioContext.createBufferSource();
             source.buffer = this.buffer;
             source.connect(this.gainNode);
@@ -104,10 +117,16 @@ export class SoundManager {
             [SoundId.Fail, 'res/failed.mp3'],
         ]);
 
-        for (const [id, src] of soundSources) {
+        const sounds = Array.from(soundSources).map(([id, src]) => {
             const sound = new SoundEffect(src);
             this.sounds.set(id, sound);
-        }
+            return sound;
+        });
+        await Promise.all(sounds.map(sound => sound.whenReady()));
+    }
+
+    fixContext(): void {
+        SoundEffect.fixContext();
     }
 
     get(id: SoundId): SoundEffect | undefined {
