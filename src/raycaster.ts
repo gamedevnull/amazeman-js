@@ -81,7 +81,7 @@ export class RaycasterCore {
     HALF_FOV: number;
     NUM_RAYS: number;
     HALF_NUM_RAYS: number;
-    DELTA_ANGLE: number;
+    PROJ_PLANE_DIST: number;
     MAX_DEPTH: number;
     STRIP_WIDTH: number;
     EPS: number = 1e-6;
@@ -103,7 +103,7 @@ export class RaycasterCore {
         this.HALF_NUM_RAYS = Math.floor(this.NUM_RAYS / 2);
         this.HALF_FOV = this.FOV / 2;
 
-        this.DELTA_ANGLE = this.FOV / this.NUM_RAYS;
+        this.PROJ_PLANE_DIST = (this.SCREEN_WIDTH / 2) / Math.tan(this.HALF_FOV); // player to screen distance in pixels
         this.MAX_DEPTH = 32; // in tiles units
 
         this.STRIP_WIDTH = Math.floor(this.SCREEN_WIDTH / this.NUM_RAYS);
@@ -112,6 +112,24 @@ export class RaycasterCore {
         this.portal_hit_results = [];
 
         this.rays_for_minimap = [];
+    }
+
+    fixRayAngle(rayIndex: number): number {
+        const cameraX = 2 * (rayIndex + 0.5) / this.NUM_RAYS - 1;
+        return Math.atan(cameraX * Math.tan(this.HALF_FOV));
+    }
+
+    getScreenX(angleFromCenter: number): number {
+        const halfWidth = this.SCREEN_WIDTH / 2;
+        return halfWidth + Math.tan(angleFromCenter) / Math.tan(this.HALF_FOV) * halfWidth;
+    }
+
+    getProjectedHeight(depth: number): number {
+        return this.PROJ_PLANE_DIST / (depth + 0.0001);
+    }
+
+    getRowDistance(pixelsFromHorizon: number): number {
+        return 0.5 * this.PROJ_PLANE_DIST / pixelsFromHorizon;
     }
 
     castRays(player: Player, map: GameLevel) {
@@ -124,13 +142,12 @@ export class RaycasterCore {
         const sx = player.posX;
         const sy = player.posY;
 
-        let rayAngle = player.angle - this.HALF_FOV + 0.0001;
-
         let x_map = Math.floor(sx);
         let y_map = Math.floor(sy);
 
         for (let ray = 0; ray < this.NUM_RAYS; ray++) {
 
+            const rayAngle = player.angle + this.fixRayAngle(ray);
             const sin_a = Math.sin(rayAngle);
             const cos_a = Math.cos(rayAngle);
 
@@ -182,14 +199,12 @@ export class RaycasterCore {
             this.wall_hit_results.push({
                 depth: depth,
                 wallType: wallType,
-                proj_height: this.SCREEN_HEIGHT / (depth + 0.0001),
+                proj_height: this.getProjectedHeight(depth),
                 texture_id: texture_id,
                 texture_offset: texture_offset,
                 tileX: tileX,
                 tileY: tileY
             });
-
-            rayAngle += this.DELTA_ANGLE;
         }
     }
 
@@ -249,7 +264,7 @@ export class RaycasterCore {
                     wallType: "vertical",
                     texture_id: map.getTileType(tile_vert[0], tile_vert[1]),
                     texture_offset,
-                    rayIndex: rayIndex ?? -1,
+                    rayIndex: rayIndex,
                     tileX: tile_vert[0],
                     tileY: tile_vert[1],
                     baseColor: map.getDoorColorAt(tile_vert[0], tile_vert[1]),
@@ -265,7 +280,7 @@ export class RaycasterCore {
             y_vert += dy_vert;
             depth_vert += delta_depth_vert;
         }
-        if (rayIndex !== undefined && portalHits.length > 0) {
+        if (rayIndex >= 0 && portalHits.length > 0) {
             if (!this.portal_hit_results[rayIndex]) this.portal_hit_results[rayIndex] = [];
             this.portal_hit_results[rayIndex].push(...portalHits);
         }
@@ -330,7 +345,7 @@ export class RaycasterCore {
                     wallType: "horizontal",
                     texture_id: map.getTileType(tile_hor[0], tile_hor[1]),
                     texture_offset,
-                    rayIndex: rayIndex ?? -1,
+                    rayIndex: rayIndex,
                     tileX: tile_hor[0],
                     tileY: tile_hor[1],
                     baseColor: map.getDoorColorAt(tile_hor[0], tile_hor[1]),
@@ -346,7 +361,7 @@ export class RaycasterCore {
             y_hor += dy;
             depth_hor += delta_depth_hor;
         }
-        if (rayIndex !== undefined && portalHits.length > 0) {
+        if (rayIndex >= 0 && portalHits.length > 0) {
             if (!this.portal_hit_results[rayIndex]) this.portal_hit_results[rayIndex] = [];
             this.portal_hit_results[rayIndex].push(...portalHits);
         }
@@ -445,7 +460,7 @@ export class Raycaster {
                                 : (frac >= barStart || frac < (barEnd % 1));
 
                             if (inBar && bar % 2 === 0) {
-                                let proj_height = this.raycasterCore.SCREEN_HEIGHT / (ray.depth + 0.0001);
+                                let proj_height = this.raycasterCore.getProjectedHeight(ray.depth);
                                 const percentageDoorTransition = currentLevel.getDoorTransitionProgress(ray.tileX, ray.tileY);
                                 proj_height *= (1 - percentageDoorTransition);
                                 this.scene_objects.push(this.makePortalColumn(ray, proj_height));
@@ -456,7 +471,7 @@ export class Raycaster {
                 } else {
 
                     for (const ray of groupHits) {
-                        const proj_height = this.raycasterCore.SCREEN_HEIGHT / (ray.depth + 0.0001);
+                        const proj_height = this.raycasterCore.getProjectedHeight(ray.depth);
                         this.scene_objects.push(this.makePortalColumn(ray, proj_height));
                     }
 
@@ -472,7 +487,7 @@ export class Raycaster {
                         const frac = getFrac(ray);
                         if ((frac >= minFrac && frac < minFrac + edgeFrac) ||
                             (frac > maxFrac - edgeFrac && frac <= maxFrac)) {
-                            let proj_height = this.raycasterCore.SCREEN_HEIGHT / (ray.depth + 0.0001);
+                            let proj_height = this.raycasterCore.getProjectedHeight(ray.depth);
                             const percentageDoorTransition = currentLevel.getDoorTransitionProgress(ray.tileX, ray.tileY);
                             if (percentageDoorTransition < 1) {
                                 proj_height *= (1 - percentageDoorTransition);
@@ -484,7 +499,7 @@ export class Raycaster {
                 } else {
 
                     for (const ray of groupHits) {
-                        const proj_height = this.raycasterCore.SCREEN_HEIGHT / (ray.depth + 0.0001);
+                        const proj_height = this.raycasterCore.getProjectedHeight(ray.depth);
                         this.scene_objects.push(this.makePortalColumn(ray, proj_height));
                     }
                 }
@@ -492,7 +507,7 @@ export class Raycaster {
             } else if (groupHits[0].portalType === "exit") {
 
                 for (const ray of groupHits) {
-                    const proj_height = this.raycasterCore.SCREEN_HEIGHT / (ray.depth + 0.0001);
+                    const proj_height = this.raycasterCore.getProjectedHeight(ray.depth);
                     this.scene_objects.push(this.makePortalColumn(ray, proj_height));
                 }
             }
@@ -526,15 +541,12 @@ export class Raycaster {
 
             const sprite = obj.sprite;
 
-            const proj = (this.raycasterCore.SCREEN_HEIGHT / normDistance) * sprite.scale;
+            const proj = this.raycasterCore.getProjectedHeight(normDistance) * sprite.scale;
             const projWidth = proj * (sprite.width / sprite.height);
             const projHeight = proj;
 
             // screen position
-            const deltaRays = delta / (this.raycasterCore.FOV / this.raycasterCore.NUM_RAYS);
-            const halfNumRays = this.raycasterCore.NUM_RAYS / 2;
-            const scale = this.raycasterCore.SCREEN_WIDTH / this.raycasterCore.NUM_RAYS;
-            const screenX = (halfNumRays + deltaRays) * scale;
+            const screenX = this.raycasterCore.getScreenX(delta);
 
             const x = screenX - projWidth / 2;
             const y = (this.raycasterCore.SCREEN_HEIGHT / 2) - projHeight / 2 + projHeight * sprite.shift;
@@ -579,7 +591,7 @@ export class Raycaster {
        // for (let x = 0; x < width; x += 1) {
         for (let rayIndex = 0; rayIndex < this.raycasterCore.NUM_RAYS; rayIndex++) {
             //const rayIndex = Math.floor(x / this.STRIP_WIDTH);
-            const rayAngle = angle - this.raycasterCore.HALF_FOV + (rayIndex + 0.5) * this.raycasterCore.DELTA_ANGLE;
+            const rayAngle = angle + this.raycasterCore.fixRayAngle(rayIndex);
             rayData[rayIndex] = {
                 rayIndex,
                 rayAngle,
@@ -592,7 +604,7 @@ export class Raycaster {
         // floor (center -> bottom)
         for (let y = halfHeight; y < height; y++) {
             const p = y - halfHeight;
-            const rowDistance = (halfHeight) / p;
+            const rowDistance = this.raycasterCore.getRowDistance(p);
             const quality = getQuality(rowDistance);
 
             if (y % quality.stepY !== 0) continue; // skip some rows
@@ -639,7 +651,7 @@ export class Raycaster {
         // ceiling (center -> top)
         for (let y = 0; y < halfHeight; y++) {
             const p = halfHeight - y;
-            const rowDistance = (halfHeight) / p;
+            const rowDistance = this.raycasterCore.getRowDistance(p);
             const quality = getQuality(rowDistance);
 
             if (y % quality.stepY !== 0) continue; // skip some rows

@@ -84,6 +84,27 @@ describe('RaycasterCore.castRays', () => {
 
 });
 
+describe('RaycasterCore projection', () => {
+
+    test('edge rays are close to half of FOV', () => {
+        const core = new RaycasterCore(640, 480);
+        expect(core.fixRayAngle(0)).toBeCloseTo(-core.HALF_FOV, 2);
+        expect(core.fixRayAngle(core.NUM_RAYS - 1)).toBeCloseTo(core.HALF_FOV, 2);
+    });
+
+    test('object straight ahead is in the screen center', () => {
+        const core = new RaycasterCore(640, 480);
+        expect(core.getScreenX(0)).toBeCloseTo(320);
+    });
+
+    test('object at the edge of FOV is at the screen edge', () => {
+        const core = new RaycasterCore(640, 480);
+        expect(core.getScreenX(-core.HALF_FOV)).toBeCloseTo(0);
+        expect(core.getScreenX(core.HALF_FOV)).toBeCloseTo(640);
+    });
+
+});
+
 describe('Raycaster line-of-sight', () => {
 
     test('can see target in open space', () => {
