@@ -1,10 +1,21 @@
 # Amazeman 3D
-Example raycaster maze-escape game in JS.
 
-![Untextured](./res/raycaster.png)
+---
+
+Wolfenstein-style maze escape game in TypeScript.
+
+Find keys, open doors, collect coins and escape the maze before time runs out.
 
 ![Textured](./res/screen.png)
 
+
+### Controls
+
+- Arrows – move and turn
+- Space – start / open door
+- M – toggle minimap
+
+---
 
 ### Demo
 
@@ -14,6 +25,20 @@ Watch:
 Play: 
 - https://gamedevnull.itch.io/amazeman-3d
 
+---
+
+### Resources
+
+Creating Pseudo 3D Games With HTML 5 Canvas and Raycasting:
+- [https://dev.opera.com/articles/3d-games-with-canvas-and-raycasting-part-1/](https://web.archive.org/web/20150323214131/https://dev.opera.com/articles/3d-games-with-canvas-and-raycasting-part-1/)
+
+Lode's Computer Graphics Tutorial about Raycasting:
+- https://lodev.org/cgtutor/raycasting.html
+
+Creating a DOOM (Wolfenstein) style 3D Game in Python:
+- https://www.youtube.com/watch?v=ECqUrT7IdqQ
+
+---
 
 ### Assets
 
@@ -33,13 +58,4 @@ Music:
 - https://opengameart.org/content/melodic-gentle-ambient-music
 
 
-### Resources
 
-Creating Pseudo 3D Games With HTML 5 Canvas and Raycasting: 
-- [https://dev.opera.com/articles/3d-games-with-canvas-and-raycasting-part-1/](https://web.archive.org/web/20150323214131/https://dev.opera.com/articles/3d-games-with-canvas-and-raycasting-part-1/)
-
-Lode's Computer Graphics Tutorial about Raycasting: 
-- https://lodev.org/cgtutor/raycasting.html
-
-Creating a DOOM (Wolfenstein) style 3D Game in Python: 
-- https://www.youtube.com/watch?v=ECqUrT7IdqQ
