@@ -1,7 +1,5 @@
 # Amazeman 3D
 
----
-
 Wolfenstein-style maze escape game in TypeScript.
 
 Find keys, open doors, collect coins and escape the maze before time runs out.
